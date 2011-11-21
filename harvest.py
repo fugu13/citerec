@@ -37,10 +37,12 @@ class Store:
         data['datestamp'] = [datestamp] #list for consistency with other contents
         key = datestamp.strftime('%Y-%m-%d') + ' ' + identifier #nice ordering guarantees for our btree database
         self.store[key] = data
+    def write_last(self, latest_completed):
+        self.store['latest'] = latest_completed
     @memoize
     def last(self):
         try:
-            return self.store.last()[1]['datestamp']
+            return self.store['latest']
         except:
             return None
     def close(self):
@@ -68,8 +70,8 @@ store = Store()
 
 if len(sys.argv) > 1:
     start = datetime.strptime(sys.argv[1], '%Y-%m-%d') #2011-10-27, for instance
-#elif store.last(): #start with the last day in the database
-#    start = store.last() #NOTE: doesn't work due to not returned in right order
+elif store.last(): #start with the last day in the database
+    start = store.last() #NOTE: doesn't work due to not returned in right order
 else:
     start = client.identify().earliestDatestamp()
 
@@ -77,6 +79,7 @@ else:
 
 
 chunk = timedelta(days=30)
+oneday = timedelta(days=1)
 
 #TODO: clearly they don't do this whole "ordered" thing. Grab records by month or year or something instead of all at once.
 #TODO: luckily, once we've done a full slurp, we only need to remember when the last full slurp was and start since then. But if interrupted, we need to start back from where the last *full* slurp was, due to the ordering problem.
@@ -91,6 +94,7 @@ try:
         except NoRecordsMatchError:
             print >>sys.stderr, "no records for this chunk, continuing to next"
             current += chunk
+            store.write_last(current - oneday)
             continue
         print >>sys.stderr, "record fetch finished @", now()
         for index, (header, metadata, _) in enumerate(records, start=1):
@@ -98,6 +102,7 @@ try:
             if index == 1 or index % 1000 == 0:
                 print >>sys.stderr, "  wrote record", index, "of", header.datestamp().strftime('%Y-%m-%d'), "with id", header.identifier()
         current += chunk
+        store.write_last(current - oneday)
 finally:
     print >>sys.stderr, "closing store"
     store.close()
