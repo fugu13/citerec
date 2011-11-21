@@ -2,10 +2,10 @@
 
 import sys
 import shelve
-from decorator import decorator
+import bsddb
 from datetime import datetime
 
-import bsddb3
+from decorator import decorator
 from oaipmh.client import Client
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
 
@@ -82,4 +82,5 @@ try:
         if index % 1000 == 0:
             print >>sys.stderr, "  wrote record", index, "of", header.datestamp().strftime('%Y-%m-%d'), "with id", header.identifier()
 finally:
+    print >>sys.stderr, "closing store"
     store.close()
