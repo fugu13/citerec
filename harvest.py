@@ -37,8 +37,8 @@ class Store:
         data['datestamp'] = [datestamp] #list for consistency with other contents
         key = datestamp.strftime('%Y-%m-%d') + ' ' + identifier #nice ordering guarantees for our btree database
         self.store[key] = data
-    def write_last(self, latest_completed):
-        self.store['latest'] = latest_completed
+    def write_last(self, latest_started):
+        self.store['latest'] = latest_started
     @memoize
     def last(self):
         try:
@@ -70,15 +70,15 @@ store = Store()
 
 if len(sys.argv) > 1:
     start = datetime.strptime(sys.argv[1], '%Y-%m-%d') #2011-10-27, for instance
-elif store.last(): #start with the last day in the database
-    start = store.last() #NOTE: doesn't work due to not returned in right order
+elif store.last():
+    start = store.last()
 else:
     start = client.identify().earliestDatestamp()
 
 #try this and see if it works; if it does resumption tokens right, this should work fine.
 
 
-chunk = timedelta(days=30)
+chunk = timedelta(days=1)
 oneday = timedelta(days=1)
 
 #TODO: clearly they don't do this whole "ordered" thing. Grab records by month or year or something instead of all at once.
@@ -94,7 +94,7 @@ try:
         except NoRecordsMatchError:
             print >>sys.stderr, "no records for this chunk, continuing to next"
             current += chunk
-            store.write_last(current - oneday)
+            store.write_last(current)
             continue
         print >>sys.stderr, "record fetch finished @", now()
         for index, (header, metadata, _) in enumerate(records, start=1):
@@ -102,7 +102,7 @@ try:
             if index == 1 or index % 1000 == 0:
                 print >>sys.stderr, "  wrote record", index, "of", header.datestamp().strftime('%Y-%m-%d'), "with id", header.identifier()
         current += chunk
-        store.write_last(current - oneday)
+        store.write_last(current)
 finally:
     print >>sys.stderr, "closing store"
     store.close()
