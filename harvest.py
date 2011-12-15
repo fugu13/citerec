@@ -90,7 +90,7 @@ try:
     while current <= datetime.now():
         print >>sys.stderr, "fetching records @", now(), "starting with", current.strftime('%Y-%m-%d')
         try:
-            records = client.listRecords(metadataPrefix='oai_dc', from_=start, until=(current + chunk))
+            records = client.listRecords(metadataPrefix='oai_dc', from_=current, until=(current + chunk))
         except NoRecordsMatchError:
             print >>sys.stderr, "no records for this chunk, continuing to next"
             current += chunk
